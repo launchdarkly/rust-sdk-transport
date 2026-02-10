@@ -13,3 +13,47 @@ keywords = ["launchdarkly", "feature-flags", "feature-toggles", "transport", "ht
 bytes = "1.11.1"
 futures = "0.3.31"
 http = "1.4.0"
+log = "0.4.29"
+
+#
+# Dependencies for hyper transport
+#
+hyper = { version = "1.0", features = ["client", "http1", "http2"], optional = true }
+hyper-util = { version = "0.1", features = ["client-legacy", "http1", "http2", "tokio"], optional = true }
+http-body-util = { version = "0.1", optional = true }
+hyper-http-proxy = { version = "1.1.0", default-features = false, optional = true }
+hyper-timeout = { version = "0.5", optional = true }
+tower = { version = "0.4", optional = true }
+no-proxy = { version = "0.3.6", default-features = false, optional = true }
+
+hyper-rustls = { version = "0.27", default-features = false, features = ["http1", "http2", "native-tokio", "ring", "tls12", "webpki-roots"], optional = true }
+
+[features]
+# Default: No features enabled, providing only the HttpTransport trait.
+# Users can implement their own transport or enable built-in implementations below.
+default = []
+
+# hyper: Enable hyper v1 HTTP client implementation (HTTP-only).
+# Includes proxy support, timeouts, and HTTP/1 + HTTP/2.
+# Use this for plain HTTP connections or when TLS is handled elsewhere.
+hyper = [
+    "dep:hyper",
+    "dep:hyper-util",
+    "dep:http-body-util",
+    "dep:hyper-http-proxy",
+    "dep:hyper-timeout",
+    "dep:tower",
+    "dep:no-proxy"
+]
+
+# hyper-rustls: Enable HTTPS support using rustls TLS library.
+# Includes all `hyper` feature dependencies plus rustls for TLS.
+# Use this for production HTTPS connections (most common use case).
+hyper-rustls = [
+    "hyper",
+    "dep:hyper-rustls",
+    "hyper-http-proxy/rustls-tls-native-roots"
+]
+
+[dev-dependencies]
+tokio = { version = "1.49.0", features = ["macros", "rt-multi-thread"] }
