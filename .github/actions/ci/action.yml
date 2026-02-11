@@ -1,0 +1,23 @@
+name: CI Workflow
+description: "Shared CI workflow."
+
+inputs:
+  feature-flags:
+    description: "Cargo feature flags to pass to test and clippy commands"
+    required: false
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - name: Check formatting
+      shell: bash
+      run: cargo fmt --check
+
+    - name: Run tests
+      shell: bash
+      run: cargo test ${{ inputs.feature-flags }}
+
+    - name: Run clippy checks
+      shell: bash
+      run: cargo clippy ${{ inputs.feature-flags }} -- -D warnings
