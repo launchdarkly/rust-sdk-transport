@@ -755,12 +755,13 @@ impl HyperTransportBuilder {
 /// Proxy configuration for HyperTransport.
 ///
 /// This determines whether and how the transport uses an HTTP/HTTPS proxy.
-#[derive(Debug, Clone)]
+#[derive(Default, Debug, Clone)]
 enum ProxyConfig {
     /// Automatically detect proxy from environment variables (default).
     ///
     /// Checks `HTTP_PROXY`, `HTTPS_PROXY`, and `NO_PROXY` environment variables.
     /// Lowercase variants take precedence over uppercase.
+    #[default]
     Auto,
 
     /// Explicitly disable proxy support.
@@ -774,32 +775,22 @@ enum ProxyConfig {
     Custom(String),
 }
 
-#[allow(clippy::derivable_impls)]
-impl Default for ProxyConfig {
-    fn default() -> Self {
-        ProxyConfig::Auto
-    }
-}
-
 /// Convert hyper's Incoming body to a Stream of Bytes
 fn body_to_stream(
     body: Incoming,
 ) -> impl futures::Stream<Item = Result<Bytes, TransportError>> + Send + Sync {
     futures::stream::unfold(body, |mut body| async move {
-        match body.frame().await {
-            Some(Ok(frame)) => {
-                if let Ok(data) = frame.into_data() {
-                    Some((Ok(data), body))
-                } else {
-                    // Skip non-data frames (trailers, etc.)
-                    Some((
-                        Err(TransportError::new(std::io::Error::other("non-data frame"))),
-                        body,
-                    ))
+        loop {
+            match body.frame().await {
+                Some(Ok(frame)) => {
+                    if let Ok(data) = frame.into_data() {
+                        return Some((Ok(data), body));
+                    }
+                    // Non-data frame (e.g., trailers) - skip and continue to next frame
                 }
+                Some(Err(e)) => return Some((Err(TransportError::new(e)), body)),
+                None => return None,
             }
-            Some(Err(e)) => Some((Err(TransportError::new(e)), body)),
-            None => None,
         }
     })
 }
@@ -924,16 +915,6 @@ mod tests {
 
         // Just verify we can create the future - not actually making network call
         let _future = transport.request(request);
-    }
-
-    #[tokio::test]
-    async fn test_body_to_stream_empty() {
-        // Create an empty incoming body for testing
-        // This is a bit tricky since Incoming is not easily constructible
-        // We'll test the integration through the full request path instead
-
-        // For now, this is a placeholder showing the test structure
-        // A full implementation would require setting up a test HTTP server
     }
 
     // Integration tests that actually make HTTP requests
