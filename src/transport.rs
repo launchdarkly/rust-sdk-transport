@@ -39,6 +39,19 @@ pub struct TransportError {
 
 impl TransportError {
     /// Create a new transport error from any error type.
+    ///
+    /// This is used by transport implementations to wrap their specific error types
+    /// into the common `TransportError` type.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use launchdarkly_sdk_transport::TransportError;
+    /// use std::io;
+    ///
+    /// let io_err = io::Error::new(io::ErrorKind::ConnectionRefused, "connection refused");
+    /// let transport_err = TransportError::new(io_err);
+    /// ```
     pub fn new(err: impl StdError + Send + Sync + 'static) -> Self {
         Self {
             inner: Box::new(err),
@@ -46,6 +59,31 @@ impl TransportError {
     }
 
     /// Get a reference to the inner error.
+    ///
+    /// Use this to access the underlying error for detailed inspection, logging,
+    /// or to check for specific error types.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use launchdarkly_sdk_transport::TransportError;
+    /// use std::io;
+    ///
+    /// fn diagnose_error(err: TransportError) {
+    ///     let inner = err.inner();
+    ///
+    ///     // Check if it's an I/O error
+    ///     if let Some(io_err) = inner.downcast_ref::<io::Error>() {
+    ///         match io_err.kind() {
+    ///             io::ErrorKind::TimedOut => println!("Operation timed out"),
+    ///             io::ErrorKind::ConnectionRefused => println!("Connection refused"),
+    ///             _ => println!("I/O error: {}", io_err),
+    ///         }
+    ///     } else {
+    ///         println!("Other error: {}", inner);
+    ///     }
+    /// }
+    /// ```
     pub fn inner(&self) -> &(dyn StdError + Send + Sync + 'static) {
         &*self.inner
     }
@@ -77,6 +115,7 @@ impl StdError for TransportError {
 ///
 /// ```ignore
 /// use launchdarkly_sdk_transport::{HttpTransport, ByteStream, TransportError};
+/// use bytes::Bytes;
 /// use std::pin::Pin;
 /// use std::future::Future;
 ///
@@ -87,7 +126,7 @@ impl StdError for TransportError {
 /// impl HttpTransport for MyTransport {
 ///     fn request(
 ///         &self,
-///         request: http::Request<Option<String>>,
+///         request: http::Request<Option<Bytes>>,
 ///     ) -> Pin<Box<dyn Future<Output = Result<http::Response<ByteStream>, TransportError>> + Send>> {
 ///         // Extract body from request
 ///         // Convert request to your HTTP client's format
@@ -102,9 +141,9 @@ pub trait HttpTransport: Send + Sync + Clone + 'static {
     ///
     /// # Arguments
     ///
-    /// * `request` - The HTTP request to execute. The body type is `Option<String>`
-    ///   to support methods like REPORT that may include a request body. Most SSE
-    ///   requests use GET and will have `None` as the body.
+    /// * `request` - The HTTP request to execute. The body type is `Option<Bytes>`
+    ///   to support methods like REPORT that may include a request body. Use `None` for
+    ///   requests without a body (like GET). `Bytes` can contain either text or binary data.
     ///
     /// # Returns
     ///
@@ -121,5 +160,5 @@ pub trait HttpTransport: Send + Sync + Clone + 'static {
     /// - The transport should NOT follow redirects. This should be left to the consumer.
     /// - The transport should NOT retry requests. This should also be left to the consumer.
     /// - The transport MAY implement timeouts as desired
-    fn request(&self, request: Request<Option<String>>) -> ResponseFuture;
+    fn request(&self, request: Request<Option<Bytes>>) -> ResponseFuture;
 }
