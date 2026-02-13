@@ -63,8 +63,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           add-paths: |
             .github/variables/rust-versions.env
-            launchdarkly-server-sdk/Cargo.toml
-            contract-tests/Cargo.toml
+            Cargo.toml
           branch: "launchdarklyreleasebot/update-to-rust${{ env.officialTargetVersion }}"
           author: "LaunchDarklyReleaseBot <LaunchDarklyReleaseBot@launchdarkly.com>"
           committer: "LaunchDarklyReleaseBot <LaunchDarklyReleaseBot@launchdarkly.com>"
