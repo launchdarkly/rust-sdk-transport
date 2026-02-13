@@ -17,6 +17,8 @@ jobs:
       matrix:
         features:
           - name: "default"
+            flags: ""
+          - name: "no-features"
             flags: "--no-default-features"
           - name: "hyper"
             flags: "--no-default-features --features hyper"
