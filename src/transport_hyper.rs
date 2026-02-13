@@ -222,7 +222,7 @@
 use crate::{ByteStream, HttpTransport, TransportError};
 use bytes::Bytes;
 use http::Uri;
-use http_body_util::{combinators::BoxBody, BodyExt, Empty, Full};
+use http_body_util::{BodyExt, Empty, Full, combinators::BoxBody};
 use hyper::body::Incoming;
 use hyper_http_proxy::{Intercept, Proxy, ProxyConnector};
 use hyper_timeout::TimeoutConnector;
