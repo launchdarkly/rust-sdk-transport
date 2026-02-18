@@ -1,3 +1,5 @@
+#![cfg_attr(docsrs, feature(doc_cfg))]
+
 //! Generic HTTP transport trait for LaunchDarkly Rust libraries.
 //!
 //! This crate provides the [`transport::HttpTransport`] trait, which abstracts over HTTP client
@@ -32,37 +34,21 @@
 //!   - Includes proxy support, timeouts, HTTP/1 and HTTP/2
 //!   - Suitable for plain HTTP or when TLS is handled elsewhere
 //!
-//! - **`hyper-rustls` feature**: Full HTTPS transport using rustls
-//!   - Includes everything from `hyper` plus TLS support
-//!   - Recommended for production use with HTTPS endpoints
+//! - **`hyper-rustls-native-roots` feature**: Full HTTPS transport using hyper-rustls and native
+//!   certificates.
+//!
+//! - **`hyper-rustls-webpki-roots` feature**: Full HTTPS transport using hyper-rustls using
+//!   Mozilla's bundled certificates.
+//!
+//! - **`native-tls` feature**: Full HTTPS transport using hyper-tls.
 //!
 //! See [`transport_hyper::HyperTransport`] for detailed documentation and examples.
-//!
-//! **Quick Start with hyper-rustls:**
-//!
-//! ```toml
-//! [dependencies]
-//! launchdarkly-sdk-transport = { version = "0.0.1", features = ["hyper-rustls"] }
-//! ```
-//!
-//! ```no_run
-//! # #[cfg(feature = "hyper-rustls")]
-//! # {
-//! use launchdarkly_sdk_transport::HyperTransport;
-//!
-//! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-//! let transport = HyperTransport::new_https()?;
-//! // Use with LaunchDarkly SDK...
-//! # Ok(())
-//! # }
-//! # }
-//! ```
 //!
 //! # Example Usage
 //!
 //! Implementing the trait for a custom HTTP client:
 //!
-//! ```ignore
+//! ```no_run
 //! use launchdarkly_sdk_transport::{HttpTransport, ResponseFuture, ByteStream, TransportError};
 //! use bytes::Bytes;
 //! use http::{Request, Response};
@@ -90,6 +76,8 @@ pub mod transport;
 pub use transport::*;
 
 #[cfg(feature = "hyper")]
+#[cfg_attr(docsrs, doc(cfg(feature = "hyper")))]
 pub mod transport_hyper;
 #[cfg(feature = "hyper")]
+#[cfg_attr(docsrs, doc(cfg(feature = "hyper")))]
 pub use transport_hyper::*;
