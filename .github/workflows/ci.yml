@@ -58,10 +58,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Get Rust version
-        id: rust-version
-        run: cat ./.github/variables/rust-versions.env >> $GITHUB_OUTPUT
-
       - name: Setup rust tooling
         run: rustup override set nightly
 
