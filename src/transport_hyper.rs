@@ -201,7 +201,7 @@
 use crate::{ByteStream, HttpTransport, TransportError};
 use bytes::Bytes;
 use http::Uri;
-use http_body_util::{BodyExt, Empty, Full, combinators::BoxBody};
+use http_body_util::{combinators::BoxBody, BodyExt, Empty, Full};
 use hyper::body::Incoming;
 use hyper_http_proxy::{Intercept, Proxy, ProxyConnector};
 use hyper_timeout::TimeoutConnector;
@@ -599,7 +599,7 @@ impl HyperTransportBuilder {
         #[cfg(feature = "hyper-rustls-native-roots")]
         let builder = hyper_rustls::HttpsConnectorBuilder::new()
             .with_native_roots()
-            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
+            .map_err(std::io::Error::other)?;
 
         // When only webpki roots are enabled, use them (infallible).
         #[cfg(feature = "hyper-rustls-webpki-roots")]
