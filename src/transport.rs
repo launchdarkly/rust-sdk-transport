@@ -2,10 +2,6 @@
 //!
 //! This module defines the [`HttpTransport`] trait which allows users to plug in
 //! their own HTTP client implementation (hyper, reqwest, or custom).
-//!
-//! # Example
-//!
-//! See the `examples/` directory for reference implementations using popular HTTP clients.
 
 use bytes::Bytes;
 use futures::Stream;
@@ -113,21 +109,18 @@ impl StdError for TransportError {
 ///
 /// # Example
 ///
-/// ```ignore
-/// use launchdarkly_sdk_transport::{HttpTransport, ByteStream, TransportError};
+/// ```no_run
+/// use launchdarkly_sdk_transport::{HttpTransport, ByteStream, TransportError, Request,
+/// ResponseFuture};
 /// use bytes::Bytes;
-/// use std::pin::Pin;
-/// use std::future::Future;
 ///
+/// #[derive(Clone)]
 /// struct MyTransport {
 ///     // Your HTTP client here
 /// }
 ///
 /// impl HttpTransport for MyTransport {
-///     fn request(
-///         &self,
-///         request: http::Request<Option<Bytes>>,
-///     ) -> Pin<Box<dyn Future<Output = Result<http::Response<ByteStream>, TransportError>> + Send>> {
+///     fn request(&self, request: Request<Option<Bytes>>) -> ResponseFuture {
 ///         // Extract body from request
 ///         // Convert request to your HTTP client's format
 ///         // Make the request

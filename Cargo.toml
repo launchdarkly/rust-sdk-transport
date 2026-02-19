@@ -26,7 +26,10 @@ hyper-timeout = { version = "0.5", optional = true }
 tower = { version = "0.4", optional = true }
 no-proxy = { version = "0.3.6", default-features = false, optional = true }
 
-hyper-rustls = { version = "0.27", default-features = false, features = ["http1", "http2", "native-tokio", "ring", "tls12", "webpki-roots"], optional = true }
+hyper-rustls = { version = "0.27", default-features = false, features = ["http1", "http2", "ring", "tls12"], optional = true }
+hyper-tls = { version = "0.6.0", optional = true }
+# Pin to 0.2.15: 0.2.16+ added Protocol::Tlsv13 but the OpenSSL fallback doesn't handle it (upstream bug).
+native-tls = { version = "=0.2.15", optional = true }
 
 [features]
 # Default: No features enabled, providing only the HttpTransport trait.
@@ -46,14 +49,29 @@ hyper = [
     "dep:no-proxy"
 ]
 
-# hyper-rustls: Enable HTTPS support using rustls TLS library.
-# Includes all `hyper` feature dependencies plus rustls for TLS.
-# Use this for production HTTPS connections (most common use case).
-hyper-rustls = [
+# hyper-tls: Enable HTTPS support using the native TLS library.
+# Includes all `hyper` feature dependencies plus native TLS for HTTPS.
+# Use this for HTTPS connections when you want to use the platform's native TLS implementation.
+native-tls = ["hyper", "dep:native-tls", "dep:hyper-tls", "hyper-http-proxy/native-tls"]
+
+# hyper-rustls-native-roots: Enable HTTPS support using rustls with native root certificates.
+hyper-rustls-native-roots = [
     "hyper",
     "dep:hyper-rustls",
+    "hyper-rustls/rustls-native-certs",
     "hyper-http-proxy/rustls-tls-native-roots"
+]
+
+# hyper-rustls-webpki-roots: Enable HTTPS support using rustls with webpki root certificates.
+hyper-rustls-webpki-roots = [
+    "hyper",
+    "dep:hyper-rustls",
+    "hyper-rustls/webpki-roots",
+    "hyper-http-proxy/rustls-tls-webpki-roots"
 ]
 
 [dev-dependencies]
 tokio = { version = "1.49.0", features = ["macros", "rt-multi-thread"] }
+
+[package.metadata.docs.rs]
+features = ["hyper-rustls-native-roots"]

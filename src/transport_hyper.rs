@@ -35,20 +35,37 @@
 //! launchdarkly-sdk-transport = { version = "0.0.1", features = ["hyper"] }
 //! ```
 //!
-//! ### `hyper-rustls`
+//! ### `native-tls`
 //!
-//! Enables HTTPS support using the rustls TLS library. This feature automatically includes
-//! the `hyper` feature and adds TLS capabilities.
-//!
-//! **Use this when:**
-//! - You need HTTPS support (most production use cases)
-//! - You want a pure-Rust TLS implementation
-//! - You need to make requests to HTTPS endpoints
+//! Enables HTTPS support using the native TLS library. This feature automatically includes the
+//! `hyper` feature and adds TLS capabilities. Certificate validation relies on the operating
+//! system's native certificate store.
 //!
 //! **Cargo.toml:**
 //! ```toml
 //! [dependencies]
-//! launchdarkly-sdk-transport = { version = "0.0.1", features = ["hyper-rustls"] }
+//! launchdarkly-sdk-transport = { version = "0.0.1", features = ["native-tls"] }
+//! ```
+//!
+//! ### `hyper-rustls-native-roots`
+//!
+//! Use the operating system's native certificate store for TLS certificate validation, relying on
+//! the hyper-rustls crate.
+//!
+//! **Cargo.toml:**
+//! ```toml
+//! [dependencies]
+//! launchdarkly-sdk-transport = { version = "0.0.1", features = ["hyper-rustls-native-roots"] }
+//! ```
+//!
+//! ### `hyper-rustls-webpki-roots`
+//!
+//! Use Mozilla's curated WebPKI certificate bundle, compiled into the binary.
+//!
+//! **Cargo.toml:**
+//! ```toml
+//! [dependencies]
+//! launchdarkly-sdk-transport = { version = "0.0.1", features = ["hyper-rustls-webpki-roots"] }
 //! ```
 //!
 //! # Timeout Configuration
@@ -69,61 +86,23 @@
 //!
 //! # TLS/HTTPS Configuration
 //!
-//! When the `hyper-rustls` feature is enabled, the transport provides HTTPS support using
-//! the rustls TLS library, a modern, pure-Rust TLS implementation.
+//! The HTTPS transport requires one root certificate provider to validate server
+//! certificates. The behavior of `build_https()` depends on which features are enabled:
 //!
-//! ## TLS Implementation Details
+//! - **`hyper-rustls-native-roots`**: Uses the OS certificate store.
 //!
-//! - **TLS Library**: rustls (pure Rust, memory-safe)
-//! - **Supported Protocols**: TLS 1.2 and TLS 1.3
-//! - **HTTP Protocols**: HTTP/1.1 and HTTP/2 over TLS
-//! - **Mixed Connections**: Can handle both HTTP and HTTPS in the same client
+//! - **`hyper-rustls-webpki-roots`**: Uses Mozilla's curated certificate bundle compiled
+//!   into the binary.
 //!
-//! ## Root Certificate Trust
-//!
-//! The HTTPS transport automatically configures certificate validation using a two-tier approach:
-//!
-//! 1. **Native Roots (Primary)**: Attempts to use the operating system's native certificate store
-//!    - Linux: Uses system certificates from `/etc/ssl/certs` or similar
-//!    - macOS: Uses Security Framework certificates
-//!    - Windows: Uses SChannel certificate store
-//!
-//! 2. **WebPKI Roots (Fallback)**: If native roots fail to load, falls back to Mozilla's
-//!    curated certificate bundle embedded in the binary
-//!
-//! This ensures the transport works reliably across all platforms while preferring system
-//! certificates when available.
-//!
-//! ## Using HTTPS
-//!
-//! ```no_run
-//! # #[cfg(feature = "hyper-rustls")]
-//! # {
-//! use launchdarkly_sdk_transport::HyperTransport;
-//! use std::time::Duration;
-//!
-//! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-//! // Simple HTTPS transport
-//! let transport = HyperTransport::new_https()?;
-//!
-//! // HTTPS with custom timeouts
-//! let transport = HyperTransport::builder()
-//!     .connect_timeout(Duration::from_secs(10))
-//!     .read_timeout(Duration::from_secs(30))
-//!     .build_https()?;
-//! # Ok(())
-//! # }
-//! # }
-//! ```
+//! - **`native-tls`**: Uses the platform's native TLS implementation.
 //!
 //! ## TLS Customization
 //!
-//! The transport currently uses a secure default TLS configuration. For custom TLS settings
-//! (custom CA certificates, client certificates, cipher suites, etc.), you can create a custom
-//! rustls connector and pass it to [`HyperTransportBuilder::build_with_connector`].
+//! For custom TLS settings (custom CA certificates, client certificates, cipher suites, etc.),
+//! you can create a custom connector and pass it to [`HyperTransportBuilder::build_with_connector`].
 //!
 //! ```no_run
-//! # #[cfg(feature = "hyper-rustls")]
+//! # #[cfg(feature = "hyper-rustls-webpki-roots")]
 //! # {
 //! use launchdarkly_sdk_transport::HyperTransport;
 //! use hyper_rustls::HttpsConnectorBuilder;
@@ -279,32 +258,21 @@ impl HyperTransport {
     /// This creates an HTTPS client that supports both HTTP/1 and HTTP/2 protocols using
     /// rustls for TLS. The transport can handle both HTTP and HTTPS connections.
     ///
-    /// This method is only available when the `hyper-rustls` feature is enabled.
+    /// This method is only available when the `hyper-rustls-native-roots` or
+    /// `hyper-rustls-webpki-roots` feature is enabled.
+    ///
     /// For timeout configuration or custom TLS settings, use [`HyperTransport::builder()`] instead.
-    ///
-    /// # TLS Configuration
-    ///
-    /// - Uses rustls for TLS (pure Rust, memory-safe)
-    /// - Supports TLS 1.2 and TLS 1.3
-    /// - Attempts to use native OS certificate store, falls back to WebPKI roots
-    /// - Validates server certificates against trusted root CAs
-    ///
-    /// See the module-level documentation for more details on TLS configuration.
-    ///
-    /// # Example
-    ///
-    /// ```no_run
-    /// # #[cfg(feature = "hyper-rustls")]
-    /// # {
-    /// use launchdarkly_sdk_transport::HyperTransport;
-    ///
-    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-    /// let _transport = HyperTransport::new_https()?;
-    /// # Ok(())
-    /// # }
-    /// # }
-    /// ```
-    #[cfg(feature = "hyper-rustls")]
+    #[cfg(any(
+        feature = "hyper-rustls-native-roots",
+        feature = "hyper-rustls-webpki-roots"
+    ))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(any(
+            feature = "hyper-rustls-native-roots",
+            feature = "hyper-rustls-webpki-roots"
+        )))
+    )]
     pub fn new_https() -> Result<
         HyperTransport<
             ProxyConnector<
@@ -312,6 +280,29 @@ impl HyperTransport {
                     hyper_rustls::HttpsConnector<
                         hyper_util::client::legacy::connect::HttpConnector,
                     >,
+                >,
+            >,
+        >,
+        std::io::Error,
+    > {
+        HyperTransport::builder().build_https()
+    }
+
+    /// Create a new HyperTransport with HTTPS support using hyper-tls
+    ///
+    /// This creates an HTTPS client that supports both HTTP/1 and HTTP/2 protocols using the
+    /// native TLS implementation. The transport can handle both HTTP and HTTPS connections.
+    ///
+    /// This method is only available when the `native-tls` feature is enabled.
+    ///
+    /// For timeout configuration or custom TLS settings, use [`HyperTransport::builder()`] instead.
+    #[cfg(feature = "native-tls")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "native-tls")))]
+    pub fn new_https() -> Result<
+        HyperTransport<
+            ProxyConnector<
+                TimeoutConnector<
+                    hyper_tls::HttpsConnector<hyper_util::client::legacy::connect::HttpConnector>,
                 >,
             >,
         >,
@@ -559,15 +550,8 @@ impl HyperTransportBuilder {
     /// Creates a transport that supports HTTP/1 and HTTP/2 over HTTPS using rustls for TLS.
     /// The transport can handle both plain HTTP and HTTPS connections.
     ///
-    /// This method is only available when the `hyper-rustls` feature is enabled.
-    ///
-    /// # TLS Configuration
-    ///
-    /// The HTTPS connector is configured with:
-    /// - **TLS Protocols**: TLS 1.2 and TLS 1.3
-    /// - **Certificate Validation**: Enabled with trusted root CAs
-    /// - **Root Certificates**: Native OS store (preferred) or WebPKI bundle (fallback)
-    /// - **HTTP Protocols**: HTTP/1.1 and HTTP/2
+    /// This method is only available when the `hyper-rustls-native-roots` or
+    /// `hyper-rustls-webpki-roots` feature is enabled.
     ///
     /// For custom TLS configuration (custom CAs, client certificates, etc.), use
     /// [`build_with_connector`](Self::build_with_connector) with a custom rustls connector.
@@ -575,7 +559,7 @@ impl HyperTransportBuilder {
     /// # Example
     ///
     /// ```no_run
-    /// # #[cfg(feature = "hyper-rustls")]
+    /// # #[cfg(any(feature = "hyper-rustls-native-roots", feature = "hyper-rustls-webpki-roots"))]
     /// # {
     /// use launchdarkly_sdk_transport::HyperTransport;
     /// use std::time::Duration;
@@ -586,7 +570,17 @@ impl HyperTransportBuilder {
     ///     .expect("failed to build HTTPS transport");
     /// # }
     /// ```
-    #[cfg(feature = "hyper-rustls")]
+    #[cfg(any(
+        feature = "hyper-rustls-native-roots",
+        feature = "hyper-rustls-webpki-roots"
+    ))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(any(
+            feature = "hyper-rustls-native-roots",
+            feature = "hyper-rustls-webpki-roots"
+        )))
+    )]
     pub fn build_https(
         self,
     ) -> Result<
@@ -601,18 +595,64 @@ impl HyperTransportBuilder {
         >,
         std::io::Error,
     > {
-        use hyper_rustls::HttpsConnectorBuilder;
-
-        let connector = HttpsConnectorBuilder::new()
+        // When only native roots are enabled, use them and propagate errors.
+        #[cfg(feature = "hyper-rustls-native-roots")]
+        let builder = hyper_rustls::HttpsConnectorBuilder::new()
             .with_native_roots()
-            .unwrap_or_else(|_| {
-                log::debug!("Falling back to webpki roots for HTTPS connector");
-                HttpsConnectorBuilder::new().with_webpki_roots()
-            })
+            .map_err(std::io::Error::other)?;
+
+        // When only webpki roots are enabled, use them (infallible).
+        #[cfg(feature = "hyper-rustls-webpki-roots")]
+        let builder = hyper_rustls::HttpsConnectorBuilder::new().with_webpki_roots();
+
+        let connector = builder
             .https_or_http()
             .enable_http1()
             .enable_http2()
             .build();
+
+        self.build_with_connector(connector)
+    }
+
+    /// Build with an HTTPS connector using native TLS
+    ///
+    /// Creates a transport that supports HTTP/1 and HTTP/2 over HTTPS using native TLS.
+    /// The transport can handle both plain HTTP and HTTPS connections.
+    ///
+    /// This method is only available when the `native-tls` feature is enabled.
+    ///
+    /// For custom TLS configuration (custom CAs, client certificates, etc.), use
+    /// [`build_with_connector`](Self::build_with_connector) with a custom native TLS connector.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// # #[cfg(feature = "native-tls")]
+    /// # {
+    /// use launchdarkly_sdk_transport::HyperTransport;
+    /// use std::time::Duration;
+    ///
+    /// let transport = HyperTransport::builder()
+    ///     .connect_timeout(Duration::from_secs(10))
+    ///     .build_https()
+    ///     .expect("failed to build HTTPS transport");
+    /// # }
+    /// ```
+    #[cfg(feature = "native-tls")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "native-tls")))]
+    pub fn build_https(
+        self,
+    ) -> Result<
+        HyperTransport<
+            ProxyConnector<
+                TimeoutConnector<
+                    hyper_tls::HttpsConnector<hyper_util::client::legacy::connect::HttpConnector>,
+                >,
+            >,
+        >,
+        std::io::Error,
+    > {
+        let connector = hyper_tls::HttpsConnector::new();
 
         self.build_with_connector(connector)
     }
@@ -662,10 +702,21 @@ impl HyperTransportBuilder {
         timeout_connector.set_read_timeout(self.read_timeout);
         timeout_connector.set_write_timeout(self.write_timeout);
 
-        // ProxyConnector::new() requires TLS features. Use unsecured() for HTTP-only.
-        #[cfg(feature = "hyper-rustls")]
+        // ProxyConnector::new() sets up TLS for connecting to HTTPS proxies.
+        // Use it when we have a TLS-backed proxy (native-tls or rustls with native roots).
+        // Otherwise use unsecured() which still supports HTTP proxies; TLS to target servers
+        // is handled by the inner connector.
+        #[cfg(any(
+            feature = "hyper-rustls-native-roots",
+            feature = "hyper-rustls-webpki-roots",
+            feature = "native-tls"
+        ))]
         let mut proxy_connector = ProxyConnector::new(timeout_connector)?;
-        #[cfg(not(feature = "hyper-rustls"))]
+        #[cfg(not(any(
+            feature = "hyper-rustls-native-roots",
+            feature = "hyper-rustls-webpki-roots",
+            feature = "native-tls"
+        )))]
         let mut proxy_connector = ProxyConnector::unsecured(timeout_connector);
 
         match self.proxy_config {
@@ -810,12 +861,24 @@ mod tests {
         drop(transport);
     }
 
-    #[cfg(feature = "hyper-rustls")]
+    #[cfg(any(
+        feature = "hyper-rustls-native-roots",
+        feature = "hyper-rustls-webpki-roots"
+    ))]
     #[test]
     fn test_hyper_transport_new_https() {
         let transport = HyperTransport::new_https().expect("transport failed to build");
         // If we can create it without panic, the test passes
         // This verifies the HTTPS connector with rustls is set up correctly
+        drop(transport);
+    }
+
+    #[cfg(feature = "native-tls")]
+    #[test]
+    fn test_hyper_transport_new_https() {
+        let transport = HyperTransport::new_https().expect("transport failed to build");
+        // If we can create it without panic, the test passes
+        // This verifies the HTTPS connector with native TLS is set up correctly
         drop(transport);
     }
 
@@ -839,7 +902,10 @@ mod tests {
         drop(transport);
     }
 
-    #[cfg(feature = "hyper-rustls")]
+    #[cfg(any(
+        feature = "hyper-rustls-native-roots",
+        feature = "hyper-rustls-webpki-roots"
+    ))]
     #[test]
     fn test_builder_https() {
         let transport = HyperTransport::builder()
@@ -849,6 +915,18 @@ mod tests {
             .build_https()
             .expect("failed to build HTTPS transport");
         // Verify we can build HTTPS transport with timeouts
+        drop(transport);
+    }
+
+    #[cfg(feature = "native-tls")]
+    #[test]
+    fn test_builder_https() {
+        let transport = HyperTransport::builder()
+            .connect_timeout(Duration::from_secs(5))
+            .read_timeout(Duration::from_secs(30))
+            .write_timeout(Duration::from_secs(10))
+            .build_https()
+            .expect("failed to build HTTPS transport");
         drop(transport);
     }
 
@@ -951,7 +1029,10 @@ mod tests {
         assert!(received_data, "Should have received some data");
     }
 
-    #[cfg(feature = "hyper-rustls")]
+    #[cfg(any(
+        feature = "hyper-rustls-native-roots",
+        feature = "hyper-rustls-webpki-roots"
+    ))]
     #[tokio::test]
     #[ignore] // Run with: cargo test -- --ignored
     async fn test_integration_https_request() {
@@ -969,6 +1050,39 @@ mod tests {
             .expect("failed to build request");
 
         let response = transport.request(request).await;
+        assert!(
+            response.is_ok(),
+            "HTTPS request should succeed: {:?}",
+            response.as_ref().err()
+        );
+
+        let response = response.unwrap();
+        assert!(
+            response.status().is_success(),
+            "Status should be success: {}",
+            response.status()
+        );
+    }
+
+    #[cfg(feature = "native-tls")]
+    #[tokio::test]
+    #[ignore] // Run with: cargo test -- --ignored
+    async fn test_integration_https_request() {
+        let transport = HyperTransport::builder()
+            .connect_timeout(Duration::from_secs(10))
+            .read_timeout(Duration::from_secs(30))
+            .build_https()
+            .expect("failed to build HTTPS transport");
+
+        // Using example.com as it's highly reliable and well-maintained
+        let request = Request::builder()
+            .method(Method::GET)
+            .uri("https://example.com/")
+            .body(None)
+            .expect("failed to build request");
+
+        let response: Result<http::Response<crate::ByteStream>, crate::TransportError> =
+            transport.request(request).await;
         assert!(
             response.is_ok(),
             "HTTPS request should succeed: {:?}",
