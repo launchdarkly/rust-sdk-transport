@@ -33,8 +33,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0 # If you only need the current version keep this.
 
       - name: Get Rust version
         id: rust-version
@@ -55,8 +53,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Setup rust tooling
         run: rustup override set nightly
