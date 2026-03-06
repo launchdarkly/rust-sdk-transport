@@ -2,7 +2,7 @@
 name = "launchdarkly-sdk-transport"
 version = "0.1.0"
 edition = "2024"
-rust-version = "1.91.0"
+rust-version = "1.92.0"
 description = "Generic transport trait and optional implementations for use across LaunchDarkly Rust libraries"
 repository = "https://github.com/launchdarkly/rust-sdk-transport"
 authors = ["LaunchDarkly"]
