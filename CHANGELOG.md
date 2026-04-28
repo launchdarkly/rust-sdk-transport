@@ -2,6 +2,13 @@
 
 All notable changes to the LaunchDarkly transport library will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [0.1.2](https://github.com/launchdarkly/rust-sdk-transport/compare/0.1.1...0.1.2) (2026-04-20)
+
+
+### Bug Fixes
+
+* Bump MSRV from 1.92 to 1.93 ([#13](https://github.com/launchdarkly/rust-sdk-transport/issues/13)) ([2a81949](https://github.com/launchdarkly/rust-sdk-transport/commit/2a8194989b32587651611e918ec20a19383633d3))
+
 ## [0.1.1](https://github.com/launchdarkly/rust-sdk-transport/compare/0.1.0...0.1.1) (2026-03-06)
 
 
