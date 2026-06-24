@@ -2,6 +2,13 @@
 
 All notable changes to the LaunchDarkly transport library will be documented in this file. This project adheres to [Semantic Versioning](http://semver.org).
 
+## [0.1.4](https://github.com/launchdarkly/rust-sdk-transport/compare/0.1.3...0.1.4) (2026-06-24)
+
+
+### Bug Fixes
+
+* Bump hyper-http-proxy to 1.1.1 to drop unmaintained rustls-pemfile ([#21](https://github.com/launchdarkly/rust-sdk-transport/issues/21)) ([e093aad](https://github.com/launchdarkly/rust-sdk-transport/commit/e093aadf609da502996b3a2a65db16e737bd12c9))
+
 ## [0.1.3](https://github.com/launchdarkly/rust-sdk-transport/compare/0.1.2...0.1.3) (2026-06-08)
 
 
