@@ -32,7 +32,7 @@ jobs:
     name: CI (${{ matrix.features.name }})
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Get Rust version
         id: rust-version
@@ -52,7 +52,7 @@ jobs:
     name: Build Documentation (all features)
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Setup rust tooling
         run: rustup override set nightly
